@@ -1,0 +1,21 @@
+{
+  "name": "ferreteria-nasca-chatbot",
+  "version": "1.0.0",
+  "description": "Chatbot WhatsApp con IA para Ferretería Nasca",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "nodemon bot.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.0.0",
+    "pino": "^10.3.1",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.34.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
