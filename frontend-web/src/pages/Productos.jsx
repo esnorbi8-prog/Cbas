@@ -3,11 +3,30 @@ import { useSearchParams } from 'react-router-dom'
 import { useCarrito } from '../context/CarritoContext'
 import api from '../services/api'
 
+const SidebarMenu = ({ categorias, catActiva, setCatActiva, setSidebarAbierto }) => (
+  <div style={{ padding: '20px 16px' }}>
+    <div style={{ fontSize: '11px', color: '#555', letterSpacing: '1.5px', marginBottom: '12px' }}>CATEGORÍAS</div>
+    {[{ id: null, nombre: 'Todos', icono: '🏪' }, ...categorias].map(cat => (
+      <div key={cat.id ?? 'all'} onClick={() => { setCatActiva(cat.id); setSidebarAbierto && setSidebarAbierto(false) }} style={{
+        padding: '9px 12px', borderRadius: '6px', fontSize: '13px', cursor: 'pointer',
+        background: catActiva === cat.id ? 'rgba(245,193,0,0.1)' : 'transparent',
+        color: catActiva === cat.id ? '#F5C100' : '#888',
+        border: catActiva === cat.id ? '0.5px solid rgba(245,193,0,0.3)' : '0.5px solid transparent',
+        marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px'
+      }}>
+        <span>{cat.icono || '📦'}</span> {cat.nombre}
+      </div>
+    ))}
+  </div>
+)
+
 export default function Productos() {
   const [searchParams] = useSearchParams()
   const [productos, setProductos] = useState([])
   const [categorias, setCategorias] = useState([])
-  const [catActiva, setCatActiva] = useState(searchParams.get('categoria_id') ? parseInt(searchParams.get('categoria_id')) : null)
+  const [catActiva, setCatActiva] = useState(
+    searchParams.get('categoria_id') ? parseInt(searchParams.get('categoria_id')) : null
+  )
   const [busqueda, setBusqueda] = useState(searchParams.get('buscar') || '')
   const [cargando, setCargando] = useState(true)
   const [sidebarAbierto, setSidebarAbierto] = useState(false)
@@ -27,26 +46,15 @@ export default function Productos() {
   useEffect(() => {
     setCargando(true)
     api.get('/productos', {
-      params: { buscar: busqueda || undefined, categoria_id: catActiva || undefined, solo_activos: true, limit: 60 }
+      params: {
+        buscar: busqueda || undefined,
+        categoria_id: catActiva || undefined,
+        solo_activos: true,
+        limit: 60
+      }
     }).then(r => { setProductos(r.data.productos); setCargando(false) })
+      .catch(() => setCargando(false))
   }, [busqueda, catActiva])
-
-  const SidebarContent = () => (
-    <div style={{ padding: '20px 16px' }}>
-      <div style={{ fontSize: '11px', color: '#555', letterSpacing: '1.5px', marginBottom: '12px' }}>CATEGORÍAS</div>
-      {[{ id: null, nombre: 'Todos', icono: '🏪' }, ...categorias].map(cat => (
-        <div key={cat.id ?? 'all'} onClick={() => { setCatActiva(cat.id); setSidebarAbierto(false) }} style={{
-          padding: '9px 12px', borderRadius: '6px', fontSize: '13px', cursor: 'pointer',
-          background: catActiva === cat.id ? 'rgba(245,193,0,0.1)' : 'transparent',
-          color: catActiva === cat.id ? '#F5C100' : '#888',
-          border: catActiva === cat.id ? '0.5px solid rgba(245,193,0,0.3)' : '0.5px solid transparent',
-          marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px'
-        }}>
-          <span>{cat.icono || '📦'}</span> {cat.nombre}
-        </div>
-      ))}
-    </div>
-  )
 
   return (
     <div style={{ background: '#0a0a0a', minHeight: '100vh', color: '#f0f0f0', fontFamily: "'IBM Plex Sans', sans-serif", display: 'flex' }}>
@@ -54,11 +62,11 @@ export default function Productos() {
       {/* Sidebar desktop */}
       {!isMobile && (
         <div style={{ width: '210px', flexShrink: 0, background: '#111', borderRight: '1px solid #1a1a1a', position: 'sticky', top: '60px', height: 'calc(100vh - 60px)', overflowY: 'auto' }}>
-          <SidebarContent />
+          <SidebarMenu categorias={categorias} catActiva={catActiva} setCatActiva={setCatActiva} />
         </div>
       )}
 
-      {/* Sidebar móvil (overlay) */}
+      {/* Sidebar móvil overlay */}
       {isMobile && sidebarAbierto && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
           <div onClick={() => setSidebarAbierto(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)' }} />
@@ -67,7 +75,7 @@ export default function Productos() {
               <span style={{ fontSize: '14px', fontWeight: '500' }}>Categorías</span>
               <button onClick={() => setSidebarAbierto(false)} style={{ background: 'none', border: 'none', color: '#888', fontSize: '18px', cursor: 'pointer' }}>✕</button>
             </div>
-            <SidebarContent />
+            <SidebarMenu categorias={categorias} catActiva={catActiva} setCatActiva={setCatActiva} setSidebarAbierto={setSidebarAbierto} />
           </div>
         </div>
       )}
