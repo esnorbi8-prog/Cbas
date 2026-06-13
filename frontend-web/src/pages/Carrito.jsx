@@ -119,7 +119,18 @@ export function Checkout() {
     if (!comprobante || !venta) return
     setEnviando(true)
     try {
-      await api.patch(`/ventas/${venta.id}/estado`, { estado: 'pendiente', comprobante_url: 'enviado_por_cliente' })
+      // 1. Subir imagen a Cloudinary
+      const formData = new FormData()
+      formData.append('comprobante', comprobante)
+      const { data: imgData } = await api.post('/upload/comprobante', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+
+      // 2. Guardar URL real en la venta
+      await api.patch(`/ventas/${venta.id}/estado`, {
+        estado: 'pendiente',
+        comprobante_url: imgData.url
+      })
       vaciar(); setPaso(4)
     } catch (err) {
       alert('Error: ' + (err.response?.data?.error || err.message))

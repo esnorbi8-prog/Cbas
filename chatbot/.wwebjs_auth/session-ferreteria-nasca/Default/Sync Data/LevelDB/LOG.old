@@ -1,3 +1,2 @@
-2026/05/07-12:49:23.272 1558 Reusing MANIFEST C:\Users\esnor\OneDrive\Documentos\PROYECTO_CRIO\chatbot\.wwebjs_auth\session-ferreteria-nasca\Default\Sync Data\LevelDB/MANIFEST-000001
-2026/05/07-12:49:23.281 1558 Recovering log #3
-2026/05/07-12:49:23.281 1558 Reusing old log C:\Users\esnor\OneDrive\Documentos\PROYECTO_CRIO\chatbot\.wwebjs_auth\session-ferreteria-nasca\Default\Sync Data\LevelDB/000003.log 
+2026/06/11-18:46:51.248 4f44 Creating DB C:\Users\esnor\OneDrive\Documentos\PROYECTO_CRIO\chatbot\.wwebjs_auth\session-ferreteria-nasca\Default\Sync Data\LevelDB since it was missing.
+2026/06/11-18:46:51.390 4f44 Reusing MANIFEST C:\Users\esnor\OneDrive\Documentos\PROYECTO_CRIO\chatbot\.wwebjs_auth\session-ferreteria-nasca\Default\Sync Data\LevelDB/MANIFEST-000001

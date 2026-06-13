@@ -9,7 +9,7 @@ const ventasCtrl = require('../controllers/ventasController')
 const inventarioCtrl = require('../controllers/inventarioController')
 const catalogoCtrl = require('../controllers/catalogoController')
 const clienteCtrl = require('../controllers/clienteController')
-const { upload, subirImagen } = require('../controllers/uploadController')
+const { upload, subirImagen, uploadComprobante, subirComprobante } = require('../controllers/uploadController')
 
 // ── AUTH STAFF ────────────────────────────────────────────────
 router.post('/auth/login', authCtrl.login)
@@ -35,7 +35,7 @@ router.get('/ventas/resumen', authMiddleware, ventasCtrl.resumen)
 router.get('/ventas', authMiddleware, ventasCtrl.listar)
 router.get('/ventas/:id', authMiddleware, ventasCtrl.obtener)
 router.post('/ventas', ventasCtrl.crear)
-router.patch('/ventas/:id/estado', ventasCtrl.cambiarEstado)  // sin auth para web
+router.patch('/ventas/:id/estado', ventasCtrl.cambiarEstado)
 
 // ── INVENTARIO ────────────────────────────────────────────────
 router.post('/inventario/movimiento', authMiddleware, inventarioCtrl.registrarMovimiento)
@@ -45,8 +45,10 @@ router.get('/inventario/stock-bajo', authMiddleware, inventarioCtrl.stockBajo)
 // ── CATEGORÍAS ────────────────────────────────────────────────
 router.get('/categorias', catalogoCtrl.listarCategorias)
 router.post('/categorias', authMiddleware, soloAdmin, catalogoCtrl.crearCategoria)
+
 // ── UPLOAD IMÁGENES ───────────────────────────────────────────
 router.post('/upload/producto', authMiddleware, upload.single('imagen'), subirImagen)
+router.post('/upload/comprobante', uploadComprobante.single('comprobante'), subirComprobante)
 
 // ── PROVEEDORES ───────────────────────────────────────────────
 router.get('/proveedores', authMiddleware, catalogoCtrl.listarProveedores)
