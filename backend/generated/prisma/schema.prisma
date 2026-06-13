@@ -1,0 +1,208 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model carrito_items {
+  id          Int        @id @default(autoincrement())
+  carrito_id  String?    @db.Uuid
+  producto_id Int?
+  cantidad    Int        @default(1)
+  agregado_en DateTime?  @default(now()) @db.Timestamp(6)
+  carritos    carritos?  @relation(fields: [carrito_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  productos   productos? @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model carritos {
+  id             String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  cliente_id     String?         @db.Uuid
+  sesion_key     String?         @db.VarChar(100)
+  creado_en      DateTime?       @default(now()) @db.Timestamp(6)
+  actualizado_en DateTime?       @default(now()) @db.Timestamp(6)
+  carrito_items  carrito_items[]
+  clientes       clientes?       @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model categorias {
+  id          Int         @id @default(autoincrement())
+  nombre      String      @unique @db.VarChar(100)
+  descripcion String?
+  icono       String?     @db.VarChar(10)
+  activa      Boolean?    @default(true)
+  productos   productos[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model chatbot_mensajes {
+  id               Int               @id @default(autoincrement())
+  sesion_id        String?           @db.Uuid
+  origen           String            @db.VarChar(10)
+  contenido        String
+  tipo             String?           @default("texto") @db.VarChar(20)
+  media_url        String?
+  creado_en        DateTime?         @default(now()) @db.Timestamp(6)
+  chatbot_sesiones chatbot_sesiones? @relation(fields: [sesion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model chatbot_sesiones {
+  id               String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  cliente_id       String?            @db.Uuid
+  telefono         String             @db.VarChar(20)
+  estado           String?            @default("activa") @db.VarChar(20)
+  paso_actual      String?            @default("inicio") @db.VarChar(50)
+  contexto         Json?              @default("{}")
+  creado_en        DateTime?          @default(now()) @db.Timestamp(6)
+  actualizado_en   DateTime?          @default(now()) @db.Timestamp(6)
+  chatbot_mensajes chatbot_mensajes[]
+  clientes         clientes?          @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([telefono], map: "idx_chatbot_telefono")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model clientes {
+  id               String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre           String?            @db.VarChar(150)
+  telefono         String?            @unique @db.VarChar(20)
+  email            String?            @db.VarChar(150)
+  direccion        String?
+  canal_origen     String?            @default("web") @db.VarChar(20)
+  creado_en        DateTime?          @default(now()) @db.Timestamp(6)
+  password         String?            @db.VarChar(255)
+  carritos         carritos[]
+  chatbot_sesiones chatbot_sesiones[]
+  ventas           ventas[]
+
+  @@index([telefono], map: "idx_clientes_telefono")
+}
+
+model configuracion {
+  clave       String  @id @db.VarChar(100)
+  valor       String
+  descripcion String?
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model inventario_movimientos {
+  id             Int        @id @default(autoincrement())
+  producto_id    Int?
+  tipo           String     @db.VarChar(20)
+  cantidad       Int
+  stock_anterior Int
+  stock_nuevo    Int
+  referencia     String?    @db.VarChar(100)
+  usuario_id     String?    @db.Uuid
+  notas          String?
+  creado_en      DateTime?  @default(now()) @db.Timestamp(6)
+  productos      productos? @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuarios       usuarios?  @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([producto_id], map: "idx_movimientos_producto")
+}
+
+model producto_imagenes {
+  id          Int        @id @default(autoincrement())
+  producto_id Int?
+  url         String
+  orden       Int?       @default(0)
+  productos   productos? @relation(fields: [producto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model productos {
+  id                     Int                      @id @default(autoincrement())
+  codigo                 String                   @unique @db.VarChar(50)
+  nombre                 String                   @db.VarChar(200)
+  descripcion            String?
+  categoria_id           Int?
+  proveedor_id           Int?
+  precio_compra          Decimal                  @default(0) @db.Decimal(10, 2)
+  precio_venta           Decimal                  @db.Decimal(10, 2)
+  unidad                 String?                  @default("unidad") @db.VarChar(30)
+  stock_actual           Int                      @default(0)
+  stock_minimo           Int?                     @default(5)
+  imagen_url             String?
+  visible_web            Boolean?                 @default(true)
+  visible_chatbot        Boolean?                 @default(true)
+  activo                 Boolean?                 @default(true)
+  creado_en              DateTime?                @default(now()) @db.Timestamp(6)
+  actualizado_en         DateTime?                @default(now()) @db.Timestamp(6)
+  carrito_items          carrito_items[]
+  inventario_movimientos inventario_movimientos[]
+  producto_imagenes      producto_imagenes[]
+  categorias             categorias?              @relation(fields: [categoria_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  proveedores            proveedores?             @relation(fields: [proveedor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  venta_items            venta_items[]
+
+  @@index([categoria_id], map: "idx_productos_categoria")
+  @@index([codigo], map: "idx_productos_codigo")
+}
+
+model proveedores {
+  id        Int         @id @default(autoincrement())
+  nombre    String      @db.VarChar(150)
+  contacto  String?     @db.VarChar(100)
+  telefono  String?     @db.VarChar(20)
+  email     String?     @db.VarChar(150)
+  direccion String?
+  activo    Boolean?    @default(true)
+  creado_en DateTime?   @default(now()) @db.Timestamp(6)
+  productos productos[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model usuarios {
+  id                     String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre                 String                   @db.VarChar(100)
+  email                  String                   @unique @db.VarChar(150)
+  password               String                   @db.VarChar(255)
+  rol                    String                   @db.VarChar(20)
+  activo                 Boolean?                 @default(true)
+  creado_en              DateTime?                @default(now()) @db.Timestamp(6)
+  inventario_movimientos inventario_movimientos[]
+  ventas                 ventas[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model venta_items {
+  id              Int        @id @default(autoincrement())
+  venta_id        String?    @db.Uuid
+  producto_id     Int?
+  nombre_producto String?    @db.VarChar(200)
+  precio_unitario Decimal    @db.Decimal(10, 2)
+  cantidad        Int
+  subtotal        Decimal    @db.Decimal(10, 2)
+  productos       productos? @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  ventas          ventas?    @relation(fields: [venta_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ventas {
+  id              String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  numero          Int           @unique @default(autoincrement())
+  cliente_id      String?       @db.Uuid
+  usuario_id      String?       @db.Uuid
+  canal           String        @db.VarChar(20)
+  estado          String?       @default("pendiente") @db.VarChar(20)
+  subtotal        Decimal       @db.Decimal(10, 2)
+  descuento       Decimal?      @default(0) @db.Decimal(10, 2)
+  total           Decimal       @db.Decimal(10, 2)
+  metodo_pago     String?       @db.VarChar(30)
+  comprobante_url String?
+  notas           String?
+  creado_en       DateTime?     @default(now()) @db.Timestamp(6)
+  actualizado_en  DateTime?     @default(now()) @db.Timestamp(6)
+  venta_items     venta_items[]
+  clientes        clientes?     @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuarios        usuarios?     @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([canal], map: "idx_ventas_canal")
+  @@index([cliente_id], map: "idx_ventas_cliente")
+  @@index([creado_en], map: "idx_ventas_creado")
+  @@index([estado], map: "idx_ventas_estado")
+}
