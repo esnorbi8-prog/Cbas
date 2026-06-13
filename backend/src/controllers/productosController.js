@@ -2,11 +2,12 @@ const prisma = require('../lib/prisma')
 
 // GET /api/productos
 async function listar(req, res) {
-  const { categoria, buscar, solo_web, solo_chatbot, page = 1, limit = 20 } = req.query
+  const { categoria_id, buscar, solo_web, solo_chatbot, solo_activos, page = 1, limit = 20 } = req.query
   const skip = (parseInt(page) - 1) * parseInt(limit)
 
-  const where = { activo: true }
-  if (categoria) where.categoria_id = parseInt(categoria)
+  const where = {}
+  if (solo_activos === 'true') where.activo = true
+  if (categoria_id) where.categoria_id = parseInt(categoria_id)
   if (solo_web === 'true') where.visible_web = true
   if (solo_chatbot === 'true') where.visible_chatbot = true
   if (buscar) where.nombre = { contains: buscar, mode: 'insensitive' }
@@ -22,7 +23,6 @@ async function listar(req, res) {
       }),
       prisma.productos.count({ where })
     ])
-
     res.json({ productos, total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)) })
   } catch (err) {
     res.status(500).json({ error: 'Error interno', detalle: err.message })

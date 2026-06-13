@@ -51,7 +51,8 @@ export default function Productos() {
         categoria_id: catActiva || undefined,
         solo_activos: true,
         limit: 60
-      }
+      },
+      headers: { 'Cache-Control': 'no-cache' }
     }).then(r => { setProductos(r.data.productos); setCargando(false) })
       .catch(() => setCargando(false))
   }, [busqueda, catActiva])
