@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import '../index.css'
 import { Link, useNavigate } from 'react-router-dom'
 import useEmblaCarousel from 'embla-carousel-react'
 import { useCarrito } from '../context/CarritoContext'
@@ -58,7 +59,7 @@ export default function Home() {
     <div style={{ background: '#0a0a0a', minHeight: '100vh', color: '#f0f0f0', fontFamily: "'IBM Plex Sans', sans-serif" }}>
 
       {/* HERO */}
-      <div style={{
+      <div className="anim-hero" style={{
         position: 'relative', borderBottom: '2px solid #F5C100',
         padding: isMobile ? '40px 20px' : '60px 32px',
         display: 'flex', flexDirection: isMobile ? 'column' : 'row',
@@ -67,13 +68,13 @@ export default function Home() {
         backgroundSize: 'cover', backgroundPosition: 'center',
       }}>
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)' }} />
-        <div style={{ flex: 1, maxWidth: '520px', position: 'relative', zIndex: 1, width: '100%' }}>
+        <div className='anim-hero-text' style={{ flex: 1, maxWidth: '520px', position: 'relative', zIndex: 1, width: '100%' }}>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
             background: 'rgba(245,193,0,0.1)', border: '0.5px solid rgba(245,193,0,0.3)',
             color: '#F5C100', borderRadius: '20px', padding: '4px 14px',
             fontSize: '11px', letterSpacing: '1px', marginBottom: '20px'
-          }}>⚡ FERRETERÍA #1 EN NASCA</div>
+          }} className='anim-badge'>⚡ FERRETERÍA #1 EN NASCA</div>
           <h1 style={{ fontSize: isMobile ? '30px' : '42px', fontWeight: '600', lineHeight: 1.15, marginBottom: '16px' }}>
             Todo para tu<br /><span style={{ color: '#F5C100' }}>obra y hogar</span>
           </h1>
@@ -93,7 +94,7 @@ export default function Home() {
             ))}
           </div>
         </div>
-        <div style={{ position: 'relative', zIndex: 1, flexShrink: 0, width: isMobile ? '100%' : '300px', height: isMobile ? '200px' : '210px', borderRadius: '14px', overflow: 'hidden', border: '2px solid #F5C100' }}>
+        <div className='hero-img-anim' style={{ position: 'relative', zIndex: 1, flexShrink: 0, width: isMobile ? '100%' : '300px', height: isMobile ? '200px' : '210px', borderRadius: '14px', overflow: 'hidden', border: '2px solid #F5C100' }}>
           <img src={LOCAL_IMG} alt="Ferretería Nasca" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: 'rgba(0,0,0,0.7)', borderRadius: '6px', padding: '5px 12px', fontSize: '11px', color: '#F5C100', fontWeight: '500' }}>📍 Jr. Lima 123, Nasca, Ica</div>
         </div>
@@ -117,8 +118,8 @@ export default function Home() {
           )}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(auto-fill, minmax(110px, 1fr))', gap: '8px' }}>
-          {categorias.map(cat => (
-            <div key={cat.id} onClick={() => filtrarPorCategoria(cat.id)} style={{ background: catActiva === cat.id ? 'rgba(245,193,0,0.08)' : '#1a1a1a', border: `0.5px solid ${catActiva === cat.id ? 'rgba(245,193,0,0.5)' : '#2a2a2a'}`, borderRadius: '10px', padding: '14px 8px', textAlign: 'center', cursor: 'pointer' }}>
+          {categorias.map((cat, idx) => (
+            <div key={cat.id} onClick={() => filtrarPorCategoria(cat.id)} className={`anim-cat-card delay-${Math.min(idx+1,12)}`} style={{ background: catActiva === cat.id ? 'rgba(245,193,0,0.08)' : '#1a1a1a', border: `0.5px solid ${catActiva === cat.id ? 'rgba(245,193,0,0.5)' : '#2a2a2a'}`, borderRadius: '10px', padding: '14px 8px', textAlign: 'center', cursor: 'pointer' }}>
               <div style={{ fontSize: '22px', marginBottom: '6px' }}>{cat.icono || '📦'}</div>
               <div style={{ fontSize: '10px', color: catActiva === cat.id ? '#F5C100' : '#888', lineHeight: 1.3 }}>{cat.nombre}</div>
             </div>
@@ -132,18 +133,17 @@ export default function Home() {
           <h2 style={{ fontSize: '18px', fontWeight: '500' }}>Productos destacados</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Link to="/productos" style={{ fontSize: '12px', color: '#F5C100', textDecoration: 'none' }}>Ver todos →</Link>
-            <button onClick={scrollPrev} style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#1a1a1a', border: '0.5px solid #2a2a2a', color: '#f0f0f0', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
-            <button onClick={scrollNext} style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#F5C100', border: 'none', color: '#0a0a0a', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+            <button onClick={scrollPrev} className='carousel-btn' style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#1a1a1a', border: '0.5px solid #2a2a2a', color: '#f0f0f0', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+            <button onClick={scrollNext} className='carousel-btn' style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#F5C100', border: 'none', color: '#0a0a0a', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
           </div>
         </div>
 
         {/* Embla Carousel */}
         <div ref={emblaRef} style={{ overflow: 'hidden' }}>
           <div style={{ display: 'flex', gap: '12px' }}>
-            {productos.map(p => (
-              <div key={p.id} style={{ flex: `0 0 ${cardW}`, minWidth: 0, background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: '10px', overflow: 'hidden', transition: 'border-color 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = '#F5C100'}
-                onMouseLeave={e => e.currentTarget.style.borderColor = '#2a2a2a'}
+            {productos.map((p, pidx) => (
+              <div key={p.id} className={`anim-card delay-${Math.min(pidx+1,12)}`} style={{ flex: `0 0 ${cardW}`, minWidth: 0, background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: '10px', overflow: 'hidden' }}
+
               >
                 <div style={{ background: '#111', height: isMobile ? '110px' : '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', borderBottom: '0.5px solid #2a2a2a', overflow: 'hidden' }}>
                   {p.imagen_url
@@ -172,7 +172,7 @@ export default function Home() {
 
       {/* BANNER YAPE */}
       <div style={{ padding: isMobile ? '0 16px 32px' : '0 32px 40px' }}>
-        <div style={{ background: 'rgba(245,193,0,0.06)', border: '0.5px solid rgba(245,193,0,0.2)', borderRadius: '12px', padding: isMobile ? '20px' : '24px 28px', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: '16px' }}>
+        <div className='banner-yape' style={{ background: 'rgba(245,193,0,0.06)', border: '0.5px solid rgba(245,193,0,0.2)', borderRadius: '12px', padding: isMobile ? '20px' : '24px 28px', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: '16px' }}>
           <div>
             <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>Paga con <span style={{ color: '#F5C100' }}>Yape</span> — rápido y seguro</div>
             <div style={{ fontSize: '12px', color: '#666' }}>Transfiere al 999888777 y envíanos la captura.</div>

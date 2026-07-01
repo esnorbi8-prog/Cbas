@@ -1,111 +1,145 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+/* ── ANIMACIONES GLOBALES – Ferretería Nasca ─────────────────────────── */
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+/* Fade in desde abajo — para cards y secciones */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+/* Fade in simple — para el hero */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-body {
-  margin: 0;
+/* Pulso suave — para el badge del hero */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.7; }
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+/* Scale in — para botones al hacer hover */
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+/* ── CLASES DE ANIMACIÓN ─────────────────────────────────────────────── */
+
+.anim-hero {
+  animation: fadeIn 0.8s ease forwards;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
+.anim-hero-text {
+  animation: fadeInUp 0.7s ease forwards;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+.anim-badge {
+  animation: pulse 3s ease-in-out infinite;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+.anim-section {
+  opacity: 0;
+  animation: fadeInUp 0.6s ease forwards;
 }
+
+.anim-card {
+  opacity: 0;
+  animation: fadeInUp 0.5s ease forwards;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.anim-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(245, 193, 0, 0.12);
+}
+
+.anim-cat-card {
+  opacity: 0;
+  animation: fadeInUp 0.4s ease forwards;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.anim-cat-card:hover {
+  transform: translateY(-3px);
+}
+
+/* Delays escalonados para cards */
+.delay-1  { animation-delay: 0.05s; }
+.delay-2  { animation-delay: 0.10s; }
+.delay-3  { animation-delay: 0.15s; }
+.delay-4  { animation-delay: 0.20s; }
+.delay-5  { animation-delay: 0.25s; }
+.delay-6  { animation-delay: 0.30s; }
+.delay-7  { animation-delay: 0.35s; }
+.delay-8  { animation-delay: 0.40s; }
+.delay-9  { animation-delay: 0.45s; }
+.delay-10 { animation-delay: 0.50s; }
+.delay-11 { animation-delay: 0.55s; }
+.delay-12 { animation-delay: 0.60s; }
+
+/* ── BOTONES ──────────────────────────────────────────────────────────── */
+
+.btn-primary {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(245, 193, 0, 0.35);
+}
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.btn-secondary:hover {
+  border-color: rgba(245,193,0,0.5) !important;
+  color: #F5C100 !important;
+}
+
+/* ── NAVBAR ───────────────────────────────────────────────────────────── */
+.nav-link-anim {
+  transition: color 0.15s ease;
+}
+.nav-link-anim:hover {
+  color: #F5C100 !important;
+}
+
+/* ── IMAGEN DEL LOCAL (hero) ─────────────────────────────────────────── */
+.hero-img-anim {
+  animation: fadeInUp 0.9s ease 0.3s both;
+  transition: transform 0.3s ease;
+}
+.hero-img-anim:hover {
+  transform: scale(1.02);
+}
+
+/* ── CARRUSEL ─────────────────────────────────────────────────────────── */
+.carousel-btn {
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.carousel-btn:hover {
+  transform: scale(1.1);
+}
+
+/* ── BANNER YAPE ──────────────────────────────────────────────────────── */
+.banner-yape {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.banner-yape:hover {
+  border-color: rgba(245,193,0,0.4) !important;
+  box-shadow: 0 4px 20px rgba(245,193,0,0.08);
+}
+
+/* ── SCROLL SUAVE GLOBAL ─────────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── SCROLLBAR PERSONALIZADA ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0a0a0a; }
+::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #F5C100; }
