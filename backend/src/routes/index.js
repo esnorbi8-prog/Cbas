@@ -10,6 +10,7 @@ const inventarioCtrl = require('../controllers/inventarioController')
 const catalogoCtrl = require('../controllers/catalogoController')
 const clienteCtrl = require('../controllers/clienteController')
 const { upload, subirImagen, uploadComprobante, subirComprobante } = require('../controllers/uploadController')
+const { reporteVentas, reporteInventario, reporteProductos } = require('../controllers/reportesController')
 
 // ── AUTH STAFF ────────────────────────────────────────────────
 router.post('/auth/login', authCtrl.login)
@@ -58,5 +59,10 @@ router.put('/proveedores/:id', authMiddleware, soloAdmin, catalogoCtrl.actualiza
 // ── CONFIGURACIÓN ─────────────────────────────────────────────
 router.get('/config', catalogoCtrl.obtenerConfig)
 router.put('/config', authMiddleware, soloAdmin, catalogoCtrl.actualizarConfig)
+// ── REPORTES EXCEL ────────────────────────────────────────────────────
+router.get('/reportes/ventas',     authMiddleware, reporteVentas)
+router.get('/reportes/inventario', authMiddleware, reporteInventario)
+router.get('/reportes/productos',  authMiddleware, reporteProductos)
+
 
 module.exports = router

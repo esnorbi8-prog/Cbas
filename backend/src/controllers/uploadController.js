@@ -56,3 +56,4 @@ async function subirComprobante(req, res) {
 }
 
 module.exports = { upload, subirImagen, uploadComprobante, subirComprobante }
+  

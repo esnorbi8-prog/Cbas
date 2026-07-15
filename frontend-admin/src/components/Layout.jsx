@@ -2,12 +2,13 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const menu = [
-  { to: '/',          icon: '📊', label: 'Dashboard' },
-  { to: '/productos', icon: '📦', label: 'Productos' },
-  { to: '/ventas',    icon: '💰', label: 'Ventas' },
-  { to: '/pos',       icon: '🧾', label: 'Punto de Venta' },
-  { to: '/inventario',icon: '📋', label: 'Inventario' },
-  { to: '/pedidos',   icon: '🚚', label: 'Pedidos Web/WA' },
+  { to: '/',           icon: '📊', label: 'Dashboard' },
+  { to: '/productos',  icon: '📦', label: 'Productos' },
+  { to: '/ventas',     icon: '💰', label: 'Ventas' },
+  { to: '/pos',        icon: '🧾', label: 'Punto de Venta' },
+  { to: '/inventario', icon: '📋', label: 'Inventario' },
+  { to: '/pedidos',    icon: '🚚', label: 'Pedidos Web/WA' },
+  { to: '/reportes',   icon: '📈', label: 'Reportes Excel' },
 ]
 
 export default function Layout({ children }) {
