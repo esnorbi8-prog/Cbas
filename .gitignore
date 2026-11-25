@@ -1,0 +1,31 @@
+# ── Dependencias ──────────────────────────────────────────────
+node_modules/
+
+# ── Variables de entorno (contienen credenciales) ─────────────
+.env
+.env.local
+.env.production
+
+# ── Sesión del chatbot WhatsApp ───────────────────────────────
+.wwebjs_auth/
+.wwebjs_cache/
+
+# ── Build del frontend ────────────────────────────────────────
+dist/
+build/
+
+# ── Prisma generado ───────────────────────────────────────────
+generated/
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ── Sistema operativo ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editor ────────────────────────────────────────────────────
+.vscode/
+.idea/
