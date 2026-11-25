@@ -113,9 +113,15 @@ async function procesarConClaude(telefono, mensaje) {
 }
 
 const client = new Client({
-  authStrategy: new LocalAuth({ clientId: 'ferreteria-nasca' }),
+  authStrategy: new LocalAuth({
+    clientId: 'ferreteria-nasca',
+    dataPath: 'C:/ferreteria-bot/sesion'
+  }),
+  authTimeoutMs: 180000,
+  webVersionCache: { type: 'none' },
   puppeteer: {
-    headless: true,
+    headless: process.env.HEADLESS !== 'false',
+    executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   }
 })
@@ -193,4 +199,7 @@ console.log('Backend: ' + API)
 console.log('QR Yape: ' + YAPE_QR_URL)
 console.log('Iniciando WhatsApp Web...\n')
 
-client.initialize()
+client.initialize().catch(err => {
+  console.error('No se pudo iniciar WhatsApp:', err)
+  process.exit(1)
+})

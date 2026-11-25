@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { CarritoProvider } from './context/CarritoContext'
 import { ClienteAuthProvider, useClienteAuth } from './context/ClienteAuthContext'
 import Navbar from './components/Navbar'
+import Footer from './components/Footer'
 import Home from './pages/Home'
 import Productos from './pages/Productos'
 import Producto from './pages/Producto'
@@ -39,6 +40,7 @@ export default function App() {
             } />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
+          <Footer />
         </BrowserRouter>
       </CarritoProvider>
     </ClienteAuthProvider>

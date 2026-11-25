@@ -1,187 +1,363 @@
-import { useEffect, useState, useCallback } from 'react'
-import '../index.css'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import useEmblaCarousel from 'embla-carousel-react'
-import { useCarrito } from '../context/CarritoContext'
 import api from '../services/api'
+import { getCategorias, getConfig, whatsappLink, precio } from '../services/tienda'
+import ProductCard, { estadoStock } from '../components/ProductCard'
+import Icon from '../components/Icon'
+import '../tienda.css'
 
 const HERO_BG = 'https://res.cloudinary.com/detjy6mbw/image/upload/v1780817404/productos_de_ferreteria_herramientas_manuales_oygptj.webp'
 const LOCAL_IMG = 'https://res.cloudinary.com/detjy6mbw/image/upload/v1780816884/000eba55204a0b757a380fe92df73a10_qduaco.webp'
 
-const SidebarMenu = ({ categorias, catActiva, setCatActiva }) => null
+const BENEFICIOS = [
+  { icon: 'phoneApp', titulo: 'Paga con Yape', texto: 'Rápido, seguro y sin efectivo' },
+  { icon: 'chat', titulo: 'Atención 24/7', texto: 'Cotiza por WhatsApp a toda hora' },
+  { icon: 'store', titulo: 'Recojo en tienda', texto: 'Separa online y recoge en Nasca' },
+  { icon: 'box', titulo: 'Stock en tiempo real', texto: 'Lo que ves es lo que hay' },
+]
+
+// Elige la imagen de un producto de la categoría (la primera que tenga foto)
+function imagenDe(lista) {
+  return lista.find(p => p.imagen_url)?.imagen_url
+}
+function precioMinimo(lista) {
+  const precios = lista.map(p => parseFloat(p.precio_venta)).filter(n => n > 0)
+  return precios.length ? Math.min(...precios) : null
+}
 
 export default function Home() {
+  const navigate = useNavigate()
   const [categorias, setCategorias] = useState([])
   const [productos, setProductos] = useState([])
-  const [catActiva, setCatActiva] = useState(null)
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-  const { agregar } = useCarrito()
-  const navigate = useNavigate()
-
-  const [emblaRef, emblaApi] = useEmblaCarousel({
-    loop: true,
-    align: 'start',
-    slidesToScroll: 1,
-  })
-
-  const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi])
-  const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi])
+  const [config, setConfig] = useState(null)
+  const [cargando, setCargando] = useState(true)
+  const [tab, setTab] = useState('todos')
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    getCategorias().then(setCategorias)
+    getConfig().then(setConfig)
+    api.get('/productos', { params: { solo_activos: true, solo_web: true, limit: 200 } })
+      .then(r => setProductos(r.data.productos || []))
+      .catch(() => setProductos([]))
+      .finally(() => setCargando(false))
   }, [])
+
+  // ── Datos derivados ───────────────────────────────────────
+  const porCategoria = useMemo(() => {
+    const mapa = {}
+    productos.forEach(p => { (mapa[p.categoria_id] ||= []).push(p) })
+    return mapa
+  }, [productos])
+
+  const catsConProductos = useMemo(() =>
+    categorias
+      .map(c => ({ ...c, productos: porCategoria[c.id] || [] }))
+      .filter(c => c.productos.length > 0)
+      .sort((a, b) => b.productos.length - a.productos.length),
+  [categorias, porCategoria])
+
+  const buscarCat = (texto) =>
+    catsConProductos.find(c => c.nombre.toLowerCase().includes(texto)) || null
+
+  const destacadaHero = buscarCat('eléctric') || catsConProductos[0]
+  const banners = [buscarCat('pintura'), buscarCat('plomer'), ...catsConProductos]
+    .filter(Boolean)
+    .filter((c, i, arr) => c.id !== destacadaHero?.id && arr.findIndex(x => x.id === c.id) === i)
+    .slice(0, 2)
+
+  const tabs = catsConProductos.slice(0, 5)
+  const listaTab = useMemo(() => {
+    const base = tab === 'todos' ? productos : (porCategoria[tab] || [])
+    // Primero los que tienen foto y stock
+    return [...base]
+      .sort((a, b) => (!!b.imagen_url - !!a.imagen_url) || ((b.stock_actual > 0) - (a.stock_actual > 0)))
+      .slice(0, 10)
+  }, [tab, productos, porCategoria])
+
+  const enStock = productos.filter(p => p.stock_actual > 0)
+  const nuevos = [...productos].sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en)).slice(0, 4)
+  const economicos = [...enStock].sort((a, b) => a.precio_venta - b.precio_venta).slice(0, 4)
+  const ultimas = enStock.filter(p => estadoStock(p).clase === 'pocas').slice(0, 4)
+
+  const telefono = config?.negocio_telefono || ''
+  const direccion = config?.negocio_direccion || 'Jr. Lima 123, Nasca, Ica'
+
+  // ── Slider principal ─────────────────────────────────────
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true })
+  const [slide, setSlide] = useState(0)
+  const prev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi])
+  const next = useCallback(() => emblaApi?.scrollNext(), [emblaApi])
 
   useEffect(() => {
-    Promise.all([
-      api.get('/categorias'),
-      api.get('/productos', { params: { solo_activos: true, limit: 12 } })
-    ]).then(([cats, prods]) => {
-      setCategorias(cats.data)
-      setProductos(prods.data.productos)
-    })
-  }, [])
+    if (!emblaApi) return
+    const onSelect = () => setSlide(emblaApi.selectedScrollSnap())
+    emblaApi.on('select', onSelect)
+    const timer = setInterval(() => emblaApi.scrollNext(), 6000)
+    return () => { clearInterval(timer); emblaApi.off('select', onSelect) }
+  }, [emblaApi])
 
-  function filtrarPorCategoria(id) {
-    setCatActiva(id)
-    api.get('/productos', { params: { categoria_id: id, solo_activos: true, limit: 12 } })
-      .then(r => setProductos(r.data.productos))
-  }
-
-  function verTodosDeCategoria(id) {
-    navigate(`/productos?categoria_id=${id}`)
-  }
-
-  const cardW = isMobile ? '160px' : '210px'
+  const slides = [
+    { key: 'principal' },
+    destacadaHero && { key: 'categoria', cat: destacadaHero },
+    { key: 'whatsapp' },
+  ].filter(Boolean)
 
   return (
-    <div style={{ background: '#0a0a0a', minHeight: '100vh', color: '#f0f0f0', fontFamily: "'IBM Plex Sans', sans-serif" }}>
+    <main className="fn-home">
+      {/* ── HERO: categorías + slider + banners ────────── */}
+      <section className="fn-container fn-hero">
+        <aside className="fn-hero__cats">
+          <div className="fn-hero__cats-title"><Icon name="grid" size={16} /> Categorías</div>
+          <ul>
+            {categorias.map(c => (
+              <li key={c.id}>
+                <Link to={`/productos?categoria_id=${c.id}`}>
+                  <span className="fn-catemoji">{c.icono || '📦'}</span>
+                  <span>{c.nombre}</span>
+                  <Icon name="right" size={14} />
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <Link to="/productos" className="fn-hero__cats-all">Ver todo el catálogo <Icon name="arrow" size={14} /></Link>
+        </aside>
 
-      {/* HERO */}
-      <div className="anim-hero" style={{
-        position: 'relative', borderBottom: '2px solid #F5C100',
-        padding: isMobile ? '40px 20px' : '60px 32px',
-        display: 'flex', flexDirection: isMobile ? 'column' : 'row',
-        alignItems: 'center', justifyContent: 'space-between', gap: '32px',
-        backgroundImage: `url(${HERO_BG})`,
-        backgroundSize: 'cover', backgroundPosition: 'center',
-      }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)' }} />
-        <div className='anim-hero-text' style={{ flex: 1, maxWidth: '520px', position: 'relative', zIndex: 1, width: '100%' }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: '6px',
-            background: 'rgba(245,193,0,0.1)', border: '0.5px solid rgba(245,193,0,0.3)',
-            color: '#F5C100', borderRadius: '20px', padding: '4px 14px',
-            fontSize: '11px', letterSpacing: '1px', marginBottom: '20px'
-          }} className='anim-badge'>⚡ FERRETERÍA #1 EN NASCA</div>
-          <h1 style={{ fontSize: isMobile ? '30px' : '42px', fontWeight: '600', lineHeight: 1.15, marginBottom: '16px' }}>
-            Todo para tu<br /><span style={{ color: '#F5C100' }}>obra y hogar</span>
-          </h1>
-          <p style={{ fontSize: '15px', color: '#aaa', lineHeight: 1.7, marginBottom: '28px' }}>
-            Cemento, fierro, herramientas y más.<br />Paga con Yape, recoge en tienda.
-          </p>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <button onClick={() => navigate('/productos')} style={{ padding: '13px 28px', borderRadius: '8px', fontSize: '14px', fontWeight: '600', background: '#F5C100', color: '#0a0a0a', border: 'none', cursor: 'pointer' }}>Ver catálogo →</button>
-            <a href="https://wa.me/51999888777" target="_blank" rel="noreferrer" style={{ padding: '13px 28px', borderRadius: '8px', fontSize: '14px', fontWeight: '500', background: 'transparent', color: '#f0f0f0', border: '0.5px solid #555', cursor: 'pointer', textDecoration: 'none' }}>💬 WhatsApp</a>
+        <div className="fn-slider">
+          <div className="fn-slider__viewport" ref={emblaRef}>
+            <div className="fn-slider__track">
+              {slides.map(s => (
+                <div className="fn-slide" key={s.key}>
+                  {s.key === 'principal' && (
+                    <div className="fn-slide__inner fn-slide--dark" style={{ backgroundImage: `url(${HERO_BG})` }}>
+                      <div className="fn-slide__content">
+                        <span className="fn-eyebrow">Ferretería en Nasca, Ica</span>
+                        <h1>Todo para tu <em>obra</em> y tu <em>hogar</em></h1>
+                        <p>Cemento, fierro, herramientas, pintura y más. Compra online, paga con Yape y recoge en tienda.</p>
+                        <div className="fn-slide__ctas">
+                          <button className="fn-btn fn-btn--primary fn-btn--lg" onClick={() => navigate('/productos')}>
+                            Ver catálogo <Icon name="arrow" size={18} />
+                          </button>
+                          {telefono && (
+                            <a className="fn-btn fn-btn--outline-light fn-btn--lg" href={whatsappLink(telefono)} target="_blank" rel="noreferrer">
+                              <Icon name="chat" size={18} /> Cotizar por WhatsApp
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {s.key === 'categoria' && (
+                    <div className="fn-slide__inner fn-slide--light">
+                      <div className="fn-slide__content">
+                        <span className="fn-eyebrow fn-eyebrow--dark">Destacado del mes</span>
+                        <h2>{s.cat.nombre}</h2>
+                        <p>{s.cat.productos.length} productos disponibles para tu próximo trabajo.</p>
+                        {precioMinimo(s.cat.productos) && (
+                          <div className="fn-slide__price">Desde <strong>{precio(precioMinimo(s.cat.productos))}</strong></div>
+                        )}
+                        <button className="fn-btn fn-btn--dark fn-btn--lg" onClick={() => navigate(`/productos?categoria_id=${s.cat.id}`)}>
+                          Comprar ahora <Icon name="arrow" size={18} />
+                        </button>
+                      </div>
+                      {imagenDe(s.cat.productos) && <img className="fn-slide__product" src={imagenDe(s.cat.productos)} alt={s.cat.nombre} />}
+                    </div>
+                  )}
+
+                  {s.key === 'whatsapp' && (
+                    <div className="fn-slide__inner fn-slide--dark" style={{ backgroundImage: `url(${LOCAL_IMG})` }}>
+                      <div className="fn-slide__content">
+                        <span className="fn-eyebrow">Nuevo · Asistente virtual</span>
+                        <h2>Cotiza al instante con <em>Ferri</em></h2>
+                        <p>Nuestro asistente de WhatsApp te dice precios y stock en segundos, las 24 horas.</p>
+                        {telefono && (
+                          <a className="fn-btn fn-btn--wa fn-btn--lg" href={whatsappLink(telefono, 'Hola Ferri, quiero cotizar')} target="_blank" rel="noreferrer">
+                            <Icon name="chat" size={18} /> Escribir a Ferri
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: '32px', marginTop: '28px' }}>
-            {[['70+', 'Productos'], ['24/7', 'Chatbot IA'], ['Yape', 'Pago rápido']].map(([n, l]) => (
-              <div key={l}>
-                <div style={{ fontSize: '20px', fontWeight: '600', color: '#F5C100' }}>{n}</div>
-                <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{l}</div>
-              </div>
+          <button className="fn-slider__arrow fn-slider__arrow--prev" onClick={prev} aria-label="Anterior"><Icon name="left" size={20} /></button>
+          <button className="fn-slider__arrow fn-slider__arrow--next" onClick={next} aria-label="Siguiente"><Icon name="right" size={20} /></button>
+          <div className="fn-slider__dots">
+            {slides.map((s, i) => (
+              <button key={s.key} className={i === slide ? 'is-active' : ''} onClick={() => emblaApi?.scrollTo(i)} aria-label={`Ir al slide ${i + 1}`} />
             ))}
           </div>
         </div>
-        <div className='hero-img-anim' style={{ position: 'relative', zIndex: 1, flexShrink: 0, width: isMobile ? '100%' : '300px', height: isMobile ? '200px' : '210px', borderRadius: '14px', overflow: 'hidden', border: '2px solid #F5C100' }}>
-          <img src={LOCAL_IMG} alt="Ferretería Nasca" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: 'rgba(0,0,0,0.7)', borderRadius: '6px', padding: '5px 12px', fontSize: '11px', color: '#F5C100', fontWeight: '500' }}>📍 Jr. Lima 123, Nasca, Ica</div>
-        </div>
-      </div>
 
-      {/* BENEFICIOS */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', background: '#111', borderBottom: '1px solid #1a1a1a' }}>
-        {[['📱','Pago con Yape'],['💬','Chatbot 24/7'],['🏪','Recojo en tienda'],['📦','Stock garantizado']].map(([icon, label], i) => (
-          <div key={label} style={{ padding: '14px', textAlign: 'center', borderRight: (!isMobile && i < 3) ? '1px solid #1a1a1a' : 'none', borderBottom: (isMobile && i < 2) ? '1px solid #1a1a1a' : 'none', fontSize: '12px', color: '#666' }}>
-            <span style={{ marginRight: '6px' }}>{icon}</span>{label}
-          </div>
-        ))}
-      </div>
-
-      {/* CATEGORÍAS */}
-      <div style={{ padding: isMobile ? '28px 16px 0' : '40px 32px 0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: '500' }}>Categorías</h2>
-          {catActiva && (
-            <button onClick={() => verTodosDeCategoria(catActiva)} style={{ fontSize: '12px', color: '#F5C100', background: 'none', border: 'none', cursor: 'pointer' }}>Ver todos →</button>
-          )}
+        <div className="fn-hero__banners">
+          {banners.map((c, i) => (
+            <Link key={c.id} to={`/productos?categoria_id=${c.id}`} className={`fn-promo fn-promo--${i === 0 ? 'yellow' : 'gray'}`}>
+              <div>
+                <span className="fn-promo__tag">{c.productos.length} productos</span>
+                <h3>{c.nombre}</h3>
+                {precioMinimo(c.productos) && <p>Desde <strong>{precio(precioMinimo(c.productos))}</strong></p>}
+                <span className="fn-promo__link">Ver más <Icon name="arrow" size={14} /></span>
+              </div>
+              {imagenDe(c.productos) && <img src={imagenDe(c.productos)} alt={c.nombre} />}
+            </Link>
+          ))}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(auto-fill, minmax(110px, 1fr))', gap: '8px' }}>
-          {categorias.map((cat, idx) => (
-            <div key={cat.id} onClick={() => filtrarPorCategoria(cat.id)} className={`anim-cat-card delay-${Math.min(idx+1,12)}`} style={{ background: catActiva === cat.id ? 'rgba(245,193,0,0.08)' : '#1a1a1a', border: `0.5px solid ${catActiva === cat.id ? 'rgba(245,193,0,0.5)' : '#2a2a2a'}`, borderRadius: '10px', padding: '14px 8px', textAlign: 'center', cursor: 'pointer' }}>
-              <div style={{ fontSize: '22px', marginBottom: '6px' }}>{cat.icono || '📦'}</div>
-              <div style={{ fontSize: '10px', color: catActiva === cat.id ? '#F5C100' : '#888', lineHeight: 1.3 }}>{cat.nombre}</div>
+      </section>
+
+      {/* ── BENEFICIOS ─────────────────────────────────── */}
+      <section className="fn-container">
+        <div className="fn-features">
+          {BENEFICIOS.map(b => (
+            <div className="fn-feature" key={b.titulo}>
+              <span className="fn-feature__icon"><Icon name={b.icon} size={26} stroke={1.7} /></span>
+              <div>
+                <strong>{b.titulo}</strong>
+                <span>{b.texto}</span>
+              </div>
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* CARRUSEL DE PRODUCTOS */}
-      <div style={{ padding: isMobile ? '24px 16px 40px' : '32px 32px 40px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '500' }}>Productos destacados</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Link to="/productos" style={{ fontSize: '12px', color: '#F5C100', textDecoration: 'none' }}>Ver todos →</Link>
-            <button onClick={scrollPrev} className='carousel-btn' style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#1a1a1a', border: '0.5px solid #2a2a2a', color: '#f0f0f0', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
-            <button onClick={scrollNext} className='carousel-btn' style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#F5C100', border: 'none', color: '#0a0a0a', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+      {/* ── PRODUCTOS DESTACADOS CON PESTAÑAS ──────────── */}
+      <section className="fn-container fn-section">
+        <div className="fn-section__head">
+          <h2 className="fn-title">Productos destacados</h2>
+          <div className="fn-tabs">
+            <button className={tab === 'todos' ? 'is-active' : ''} onClick={() => setTab('todos')}>Todos</button>
+            {tabs.map(c => (
+              <button key={c.id} className={tab === c.id ? 'is-active' : ''} onClick={() => setTab(c.id)}>{c.nombre}</button>
+            ))}
           </div>
         </div>
 
-        {/* Embla Carousel */}
-        <div ref={emblaRef} style={{ overflow: 'hidden' }}>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            {productos.map((p, pidx) => (
-              <div key={p.id} className={`anim-card delay-${Math.min(pidx+1,12)}`} style={{ flex: `0 0 ${cardW}`, minWidth: 0, background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: '10px', overflow: 'hidden' }}
+        {cargando ? (
+          <div className="fn-grid">
+            {Array.from({ length: 10 }).map((_, i) => <div key={i} className="fn-card fn-card--skeleton" />)}
+          </div>
+        ) : listaTab.length === 0 ? (
+          <p className="fn-empty">Aún no hay productos para mostrar.</p>
+        ) : (
+          <div className="fn-grid">
+            {listaTab.map(p => <ProductCard key={p.id} producto={p} />)}
+          </div>
+        )}
 
-              >
-                <div style={{ background: '#111', height: isMobile ? '110px' : '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', borderBottom: '0.5px solid #2a2a2a', overflow: 'hidden' }}>
-                  {p.imagen_url
-                    ? <img src={p.imagen_url} alt={p.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <span>{p.categorias?.icono || '📦'}</span>
-                  }
-                </div>
-                <div style={{ padding: '12px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: '500', lineHeight: 1.3, marginBottom: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nombre}</div>
-                  <div style={{ fontSize: '10px', color: '#555', marginBottom: '8px' }}>{p.unidad}</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '15px', fontWeight: '600', color: '#F5C100' }}>S/ {parseFloat(p.precio_venta).toFixed(2)}</span>
-                    <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '10px', background: p.stock_actual > 5 ? 'rgba(59,109,17,0.15)' : 'rgba(226,75,74,0.12)', color: p.stock_actual > 5 ? '#5a9e30' : '#E24B4A' }}>
-                      {p.stock_actual > 0 ? `${p.stock_actual} disp.` : 'Sin stock'}
-                    </span>
-                  </div>
-                  <button onClick={() => agregar(p)} disabled={p.stock_actual === 0} style={{ width: '100%', padding: '8px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', background: p.stock_actual === 0 ? 'transparent' : '#F5C100', color: p.stock_actual === 0 ? '#444' : '#0a0a0a', border: p.stock_actual === 0 ? '0.5px solid #2a2a2a' : 'none', cursor: p.stock_actual === 0 ? 'not-allowed' : 'pointer' }}>
-                    {p.stock_actual === 0 ? 'Sin stock' : '+ Agregar'}
-                  </button>
+        <div className="fn-section__more">
+          <Link to={tab === 'todos' ? '/productos' : `/productos?categoria_id=${tab}`} className="fn-btn fn-btn--outline">
+            Ver todos los productos <Icon name="arrow" size={16} />
+          </Link>
+        </div>
+      </section>
+
+      {/* ── BANNERS YAPE + CHATBOT ─────────────────────── */}
+      <section className="fn-container fn-duo">
+        <div className="fn-duo__item fn-duo__item--yape">
+          <span className="fn-eyebrow fn-eyebrow--dark">Pago fácil</span>
+          <h3>Paga con Yape en segundos</h3>
+          <p>Yapea al <strong>{config?.yape_numero || '999888777'}</strong>, sube tu captura y listo. Te confirmamos el pedido al momento.</p>
+          <Link to="/productos" className="fn-btn fn-btn--dark">Empezar a comprar <Icon name="arrow" size={16} /></Link>
+          <Icon name="phoneApp" size={150} stroke={1} className="fn-duo__bg" />
+        </div>
+        <div className="fn-duo__item fn-duo__item--dark">
+          <span className="fn-eyebrow">Recojo en tienda</span>
+          <h3>Compra online, recoge en Nasca</h3>
+          <p>Separa tus materiales desde casa y pásalos a recoger sin hacer cola en {direccion}.</p>
+          <a className="fn-btn fn-btn--primary" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`} target="_blank" rel="noreferrer">
+            Cómo llegar <Icon name="pin" size={16} />
+          </a>
+          <Icon name="store" size={150} stroke={1} className="fn-duo__bg" />
+        </div>
+      </section>
+
+      {/* ── CATEGORÍAS POPULARES ───────────────────────── */}
+      {catsConProductos.length > 0 && (
+        <section className="fn-container fn-section">
+          <div className="fn-section__head">
+            <h2 className="fn-title">Compra por categoría</h2>
+            <Link to="/productos" className="fn-link">Ver catálogo completo <Icon name="arrow" size={14} /></Link>
+          </div>
+          <div className="fn-catgrid">
+            {catsConProductos.slice(0, 8).map(c => (
+              <div className="fn-cattile" key={c.id}>
+                <Link to={`/productos?categoria_id=${c.id}`} className="fn-cattile__img">
+                  {imagenDe(c.productos)
+                    ? <img src={imagenDe(c.productos)} alt={c.nombre} loading="lazy" />
+                    : <span className="fn-card__placeholder">{c.icono || '📦'}</span>}
+                </Link>
+                <div className="fn-cattile__body">
+                  <Link to={`/productos?categoria_id=${c.id}`} className="fn-cattile__name">{c.nombre}</Link>
+                  <span className="fn-cattile__count">{c.productos.length} productos</span>
+                  <ul>
+                    {c.productos.slice(0, 3).map(p => (
+                      <li key={p.id}><Link to={`/producto/${p.id}`}>{p.nombre}</Link></li>
+                    ))}
+                  </ul>
+                  <Link to={`/productos?categoria_id=${c.id}`} className="fn-link fn-link--sm">Ver todo <Icon name="arrow" size={12} /></Link>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      </div>
+        </section>
+      )}
 
-      {/* BANNER YAPE */}
-      <div style={{ padding: isMobile ? '0 16px 32px' : '0 32px 40px' }}>
-        <div className='banner-yape' style={{ background: 'rgba(245,193,0,0.06)', border: '0.5px solid rgba(245,193,0,0.2)', borderRadius: '12px', padding: isMobile ? '20px' : '24px 28px', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: '16px' }}>
-          <div>
-            <div style={{ fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>Paga con <span style={{ color: '#F5C100' }}>Yape</span> — rápido y seguro</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>Transfiere al 999888777 y envíanos la captura.</div>
+      {/* ── LISTAS RÁPIDAS ─────────────────────────────── */}
+      {productos.length > 0 && (
+        <section className="fn-container fn-section">
+          <div className="fn-lists">
+            {[
+              { titulo: 'Lo más nuevo', lista: nuevos },
+              { titulo: 'Mejores precios', lista: economicos },
+              { titulo: 'Últimas unidades', lista: ultimas },
+            ].filter(l => l.lista.length > 0).map(l => (
+              <div className="fn-list" key={l.titulo}>
+                <h3 className="fn-list__title">{l.titulo}</h3>
+                {l.lista.map(p => (
+                  <Link to={`/producto/${p.id}`} className="fn-mini" key={p.id}>
+                    <span className="fn-mini__img">
+                      {p.imagen_url ? <img src={p.imagen_url} alt="" loading="lazy" /> : (p.categorias?.icono || '📦')}
+                    </span>
+                    <span className="fn-mini__info">
+                      <span className="fn-mini__name">{p.nombre}</span>
+                      <span className="fn-mini__price">{precio(p.precio_venta)} <small>/ {p.unidad || 'unidad'}</small></span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ))}
           </div>
-          <button onClick={() => navigate('/productos')} style={{ padding: '11px 24px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', background: '#F5C100', color: '#0a0a0a', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', width: isMobile ? '100%' : 'auto' }}>
-            Comprar ahora
-          </button>
+        </section>
+      )}
+
+      {/* ── VISÍTANOS ──────────────────────────────────── */}
+      <section className="fn-container fn-section">
+        <div className="fn-visit">
+          <div className="fn-visit__img" style={{ backgroundImage: `url(${LOCAL_IMG})` }} />
+          <div className="fn-visit__body">
+            <span className="fn-eyebrow fn-eyebrow--dark">Nuestra tienda</span>
+            <h2>Visítanos en Nasca</h2>
+            <p>Más de 10 categorías de materiales y herramientas, con asesoría para que compres justo lo que tu obra necesita.</p>
+            <ul className="fn-visit__data">
+              <li><Icon name="pin" size={18} /> {direccion}</li>
+              {config?.negocio_horario && <li><Icon name="clock" size={18} /> {config.negocio_horario}</li>}
+              {telefono && <li><Icon name="phone" size={18} /> {telefono}</li>}
+            </ul>
+            <div className="fn-slide__ctas">
+              <a className="fn-btn fn-btn--dark" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`} target="_blank" rel="noreferrer">
+                <Icon name="pin" size={16} /> Cómo llegar
+              </a>
+              {telefono && (
+                <a className="fn-btn fn-btn--wa" href={whatsappLink(telefono)} target="_blank" rel="noreferrer">
+                  <Icon name="chat" size={16} /> WhatsApp
+                </a>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   )
 }

@@ -1,132 +1,231 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useCarrito } from '../context/CarritoContext'
 import { useClienteAuth } from '../context/ClienteAuthContext'
-import { useState, useEffect } from 'react'
+import { getCategorias, getConfig, whatsappLink, precio } from '../services/tienda'
+import Icon from './Icon'
+import '../tienda.css'
 
 export default function Navbar() {
-  const { totalItems } = useCarrito()
+  const { totalItems, total } = useCarrito()
   const { cliente, logout } = useClienteAuth()
-  const [buscar, setBuscar] = useState('')
-  const [menuAbierto, setMenuAbierto] = useState(false)
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const navigate = useNavigate()
+  const location = useLocation()
+
+  const [categorias, setCategorias] = useState([])
+  const [config, setConfig] = useState(null)
+  const [buscar, setBuscar] = useState('')
+  const [catBuscar, setCatBuscar] = useState('')
+  const [catsAbierto, setCatsAbierto] = useState(false)
+  const [drawer, setDrawer] = useState(false)
+  const catsRef = useRef(null)
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    getCategorias().then(setCategorias)
+    getConfig().then(setConfig)
   }, [])
+
+  // Cerrar menús al cambiar de página
+  useEffect(() => { setCatsAbierto(false); setDrawer(false) }, [location.pathname, location.search])
+
+  // Cerrar el desplegable de categorías al hacer clic fuera
+  useEffect(() => {
+    function fuera(e) { if (catsRef.current && !catsRef.current.contains(e.target)) setCatsAbierto(false) }
+    document.addEventListener('mousedown', fuera)
+    return () => document.removeEventListener('mousedown', fuera)
+  }, [])
+
+  // Evitar scroll del fondo con el menú móvil abierto
+  useEffect(() => {
+    document.body.style.overflow = drawer ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [drawer])
 
   function handleBuscar(e) {
     e.preventDefault()
-    if (buscar.trim()) { navigate(`/productos?buscar=${buscar}`); setMenuAbierto(false) }
+    const params = new URLSearchParams()
+    if (buscar.trim()) params.set('buscar', buscar.trim())
+    if (catBuscar) params.set('categoria_id', catBuscar)
+    navigate(`/productos${params.toString() ? `?${params}` : ''}`)
   }
 
+  const telefono = config?.negocio_telefono || ''
+  const primerNombre = cliente?.nombre?.split(' ')[0]
+
   return (
-    <>
-      <nav style={{
-        background: '#111', borderBottom: '2px solid #F5C100',
-        padding: '0 20px', height: '60px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        position: 'sticky', top: 0, zIndex: 100,
-        fontFamily: "'IBM Plex Sans', sans-serif"
-      }}>
-        {/* Logo */}
-        <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-          <div style={{ width: '34px', height: '34px', background: '#F5C100', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>🔧</div>
-          <div>
-            <div style={{ color: '#f0f0f0', fontWeight: '600', fontSize: isMobile ? '13px' : '15px', lineHeight: 1 }}>Ferretería Nasca</div>
-            {!isMobile && <div style={{ color: '#F5C100', fontSize: '9px', letterSpacing: '2px', marginTop: '2px' }}>NASCA, ICA</div>}
+    <header className="fn-header">
+      {/* ── Barra superior ─────────────────────────────── */}
+      <div className="fn-topbar">
+        <div className="fn-container fn-topbar__inner">
+          <span className="fn-topbar__msg">
+            <Icon name="chat" size={14} /> Pide por WhatsApp las 24 horas · Recojo en tienda
+          </span>
+          <div className="fn-topbar__right">
+            {config?.negocio_horario && (
+              <span><Icon name="clock" size={14} /> {config.negocio_horario}</span>
+            )}
+            {telefono && (
+              <a href={`tel:${telefono.replace(/\s/g, '')}`}><Icon name="phone" size={14} /> {telefono}</a>
+            )}
           </div>
-        </Link>
+        </div>
+      </div>
 
-        {/* Buscador — solo desktop */}
-        {!isMobile && (
-          <form onSubmit={handleBuscar} style={{ flex: 1, maxWidth: '380px', margin: '0 20px' }}>
-            <div style={{ display: 'flex', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: '8px', overflow: 'hidden' }}>
-              <input value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Buscar productos..."
-                style={{ flex: 1, padding: '9px 14px', background: 'transparent', border: 'none', outline: 'none', color: '#f0f0f0', fontSize: '13px' }} />
-              <button type="submit" style={{ padding: '9px 14px', background: '#F5C100', border: 'none', color: '#0a0a0a', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>🔍</button>
-            </div>
+      {/* ── Logo, buscador, cuenta y carrito ───────────── */}
+      <div className="fn-mainbar">
+        <div className="fn-container fn-mainbar__inner">
+          <button className="fn-iconbtn fn-only-mobile" onClick={() => setDrawer(true)} aria-label="Abrir menú">
+            <Icon name="menu" size={22} />
+          </button>
+
+          <Link to="/" className="fn-logo">
+            <span className="fn-logo__mark"><Icon name="wrench" size={22} /></span>
+            <span className="fn-logo__text">
+              <strong>Ferretería Nasca</strong>
+              <small>Materiales · Herramientas</small>
+            </span>
+          </Link>
+
+          <form className="fn-search fn-only-desktop" onSubmit={handleBuscar}>
+            <select value={catBuscar} onChange={e => setCatBuscar(e.target.value)} aria-label="Categoría">
+              <option value="">Todas las categorías</option>
+              {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
+            <input
+              value={buscar}
+              onChange={e => setBuscar(e.target.value)}
+              placeholder="¿Qué estás buscando? Cemento, taladro, pintura…"
+            />
+            <button type="submit" aria-label="Buscar"><Icon name="search" size={20} /></button>
           </form>
-        )}
 
-        {/* Links desktop */}
-        {!isMobile && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Link to="/productos" style={{ color: '#888', textDecoration: 'none', fontSize: '13px', padding: '6px 12px' }}>Productos</Link>
+          <div className="fn-actions">
             {cliente ? (
-              <>
-                <Link to="/mis-pedidos" style={{ color: '#f0f0f0', textDecoration: 'none', fontSize: '13px', padding: '6px 12px', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: '6px' }}>
-                  👤 {cliente.nombre.split(' ')[0]}
-                </Link>
-                <button onClick={logout} style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '12px', background: 'transparent', border: '0.5px solid #2a2a2a', color: '#666', cursor: 'pointer' }}>Salir</button>
-              </>
+              <div className="fn-account fn-only-desktop">
+                <Icon name="user" size={26} stroke={1.6} />
+                <div>
+                  <small>Hola, {primerNombre}</small>
+                  <span>
+                    <Link to="/mis-pedidos">Mis pedidos</Link>
+                    <button onClick={logout}>Salir</button>
+                  </span>
+                </div>
+              </div>
             ) : (
-              <Link to="/login" style={{ padding: '8px 18px', borderRadius: '6px', fontSize: '13px', fontWeight: '600', background: '#F5C100', color: '#0a0a0a', textDecoration: 'none' }}>
-                Iniciar sesión
+              <Link to="/login" className="fn-account fn-only-desktop">
+                <Icon name="user" size={26} stroke={1.6} />
+                <div>
+                  <small>Bienvenido</small>
+                  <span>Iniciar sesión</span>
+                </div>
               </Link>
             )}
-            <Link to="/carrito" style={{ position: 'relative', textDecoration: 'none', marginLeft: '4px' }}>
-              <div style={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: '8px', padding: '7px 12px', fontSize: '16px' }}>🛒</div>
-              {totalItems > 0 && (
-                <span style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#F5C100', color: '#0a0a0a', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{totalItems}</span>
-              )}
+
+            <Link to="/carrito" className="fn-cart" aria-label="Carrito">
+              <span className="fn-cart__icon">
+                <Icon name="cart" size={26} stroke={1.6} />
+                <b>{totalItems}</b>
+              </span>
+              <span className="fn-cart__text fn-only-desktop">
+                <small>Mi carrito</small>
+                <strong>{precio(total)}</strong>
+              </span>
             </Link>
           </div>
-        )}
+        </div>
 
-        {/* Mobile: carrito + hamburguesa */}
-        {isMobile && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Link to="/carrito" style={{ position: 'relative', textDecoration: 'none' }}>
-              <div style={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: '8px', padding: '7px 10px', fontSize: '16px' }}>🛒</div>
-              {totalItems > 0 && (
-                <span style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#F5C100', color: '#0a0a0a', borderRadius: '50%', width: '16px', height: '16px', fontSize: '9px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{totalItems}</span>
-              )}
-            </Link>
-            <button onClick={() => setMenuAbierto(!menuAbierto)} style={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: '8px', padding: '7px 10px', fontSize: '18px', cursor: 'pointer', color: '#f0f0f0' }}>
-              {menuAbierto ? '✕' : '☰'}
+        {/* Buscador móvil */}
+        <form className="fn-search fn-search--mobile fn-only-mobile" onSubmit={handleBuscar}>
+          <input value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Buscar productos…" />
+          <button type="submit" aria-label="Buscar"><Icon name="search" size={20} /></button>
+        </form>
+      </div>
+
+      {/* ── Menú de navegación ─────────────────────────── */}
+      <nav className="fn-navbar fn-only-desktop">
+        <div className="fn-container fn-navbar__inner">
+          <div className="fn-allcats" ref={catsRef}>
+            <button className="fn-allcats__btn" onClick={() => setCatsAbierto(v => !v)}>
+              <Icon name="menu" size={18} /> Todas las categorías <Icon name="down" size={16} />
             </button>
+            {catsAbierto && (
+              <ul className="fn-allcats__menu">
+                {categorias.map(c => (
+                  <li key={c.id}>
+                    <Link to={`/productos?categoria_id=${c.id}`}>
+                      <span className="fn-catemoji">{c.icono || '📦'}</span> {c.nombre}
+                      <Icon name="right" size={14} />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-        )}
-      </nav>
 
-      {/* Menú móvil desplegable */}
-      {isMobile && menuAbierto && (
-        <div style={{
-          position: 'fixed', top: '60px', left: 0, right: 0, zIndex: 99,
-          background: '#111', borderBottom: '2px solid #F5C100',
-          padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px'
-        }}>
-          {/* Buscador móvil */}
-          <form onSubmit={handleBuscar}>
-            <div style={{ display: 'flex', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: '8px', overflow: 'hidden' }}>
-              <input value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Buscar productos..."
-                style={{ flex: 1, padding: '10px 14px', background: 'transparent', border: 'none', outline: 'none', color: '#f0f0f0', fontSize: '14px' }} />
-              <button type="submit" style={{ padding: '10px 14px', background: '#F5C100', border: 'none', color: '#0a0a0a', cursor: 'pointer', fontWeight: '600' }}>🔍</button>
-            </div>
-          </form>
+          <ul className="fn-menu">
+            <li><NavLink to="/" end>Inicio</NavLink></li>
+            <li><NavLink to="/productos">Catálogo</NavLink></li>
+            {categorias.slice(0, 4).map(c => (
+              <li key={c.id}><Link to={`/productos?categoria_id=${c.id}`}>{c.nombre}</Link></li>
+            ))}
+          </ul>
 
-          <Link to="/productos" onClick={() => setMenuAbierto(false)} style={{ color: '#f0f0f0', textDecoration: 'none', fontSize: '15px', padding: '10px 0', borderBottom: '0.5px solid #1a1a1a' }}>
-            📦 Productos
-          </Link>
-          {cliente ? (
-            <>
-              <Link to="/mis-pedidos" onClick={() => setMenuAbierto(false)} style={{ color: '#f0f0f0', textDecoration: 'none', fontSize: '15px', padding: '10px 0', borderBottom: '0.5px solid #1a1a1a' }}>
-                👤 {cliente.nombre}
-              </Link>
-              <button onClick={() => { logout(); setMenuAbierto(false) }} style={{ background: 'transparent', border: '0.5px solid #2a2a2a', borderRadius: '8px', padding: '10px', color: '#888', fontSize: '14px', cursor: 'pointer', textAlign: 'left' }}>
-                Cerrar sesión
-              </button>
-            </>
-          ) : (
-            <Link to="/login" onClick={() => setMenuAbierto(false)} style={{ padding: '12px', borderRadius: '8px', background: '#F5C100', color: '#0a0a0a', textDecoration: 'none', fontSize: '14px', fontWeight: '600', textAlign: 'center' }}>
-              Iniciar sesión
-            </Link>
+          {telefono && (
+            <a className="fn-navbar__wa" href={whatsappLink(telefono)} target="_blank" rel="noreferrer">
+              <Icon name="chat" size={16} /> Pedir por WhatsApp
+            </a>
           )}
         </div>
-      )}
-    </>
+      </nav>
+
+      {/* ── Menú lateral móvil ─────────────────────────── */}
+      <div className={`fn-drawer ${drawer ? 'is-open' : ''}`} onClick={() => setDrawer(false)}>
+        <aside className="fn-drawer__panel" onClick={e => e.stopPropagation()}>
+          <div className="fn-drawer__head">
+            <span>Menú</span>
+            <button className="fn-iconbtn" onClick={() => setDrawer(false)} aria-label="Cerrar menú">
+              <Icon name="x" size={22} />
+            </button>
+          </div>
+
+          {cliente ? (
+            <div className="fn-drawer__user">
+              <Icon name="user" size={20} /> Hola, {primerNombre}
+            </div>
+          ) : (
+            <Link to="/login" className="fn-btn fn-btn--primary fn-btn--block">Iniciar sesión</Link>
+          )}
+
+          <ul className="fn-drawer__links">
+            <li><Link to="/">Inicio</Link></li>
+            <li><Link to="/productos">Catálogo completo</Link></li>
+            <li><Link to="/carrito">Mi carrito ({totalItems})</Link></li>
+            {cliente && <li><Link to="/mis-pedidos">Mis pedidos</Link></li>}
+          </ul>
+
+          <div className="fn-drawer__title">Categorías</div>
+          <ul className="fn-drawer__links">
+            {categorias.map(c => (
+              <li key={c.id}>
+                <Link to={`/productos?categoria_id=${c.id}`}>
+                  <span className="fn-catemoji">{c.icono || '📦'}</span> {c.nombre}
+                </Link>
+              </li>
+            ))}
+          </ul>
+
+          {telefono && (
+            <a className="fn-btn fn-btn--wa fn-btn--block" href={whatsappLink(telefono)} target="_blank" rel="noreferrer">
+              <Icon name="chat" size={18} /> Pedir por WhatsApp
+            </a>
+          )}
+          {cliente && (
+            <button className="fn-btn fn-btn--ghost fn-btn--block" onClick={() => { logout(); setDrawer(false) }}>
+              <Icon name="logout" size={18} /> Cerrar sesión
+            </button>
+          )}
+        </aside>
+      </div>
+    </header>
   )
 }
